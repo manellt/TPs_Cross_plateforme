@@ -1,336 +1,72 @@
 import 'package:flutter/material.dart';
 
+import '../models/note.dart';
+import '../widgets/note_input_dialog.dart';
+import '../widgets/note_item.dart';
+
 class NotesScreen extends StatefulWidget {
-  const NotesScreen({Key? key}) : super(key: key);
+  const NotesScreen({super.key});
 
   @override
-  _NotesScreenState createState() => _NotesScreenState();
+  State<NotesScreen> createState() => _NotesScreenState();
 }
 
 class _NotesScreenState extends State<NotesScreen> {
-
-  // Sample initial notes data
-  List<Map<String, dynamic>> notes = [
-    {
-      'id': '1',
-      'content': 'Learn Flutter',
-      'createdAt': DateTime.now().toIso8601String(),
-    },
-    {
-      'id': '2',
-      'content': 'Complete the tutorial',
-      'createdAt': DateTime.now().toIso8601String(),
-    },
+  final List<Note> _notes = [
+    const Note(id: '1', title: 'Welcome', content: 'Tap + to add a note.'),
+    const Note(id: '2', title: 'Shopping', content: 'Milk, bread, coffee.'),
   ];
 
-  // Controller
-  TextEditingController noteController = TextEditingController();
-
-  // Note being edited
-  Map<String, dynamic>? editingNote;
-
-  // Add or update note
-  void addNote() {
-
-    if (noteController.text.trim().isEmpty) return;
-
+  Future<void> _add() async {
+    final draft = await showNoteInputDialog(context);
+    if (draft == null) return;
     setState(() {
-
-      if (editingNote != null) {
-
-        // Update existing note
-        for (int i = 0; i < notes.length; i++) {
-
-          if (notes[i]['id'] == editingNote!['id']) {
-
-            notes[i] = {
-              ...notes[i],
-              'content': noteController.text,
-              'updatedAt': DateTime.now().toIso8601String(),
-            };
-
-            break;
-          }
-        }
-
-        editingNote = null;
-
-      } else {
-
-        // Add new note
-        final newNote = {
-          'id': DateTime.now().millisecondsSinceEpoch.toString(),
-          'content': noteController.text,
-          'createdAt': DateTime.now().toIso8601String(),
-        };
-
-        notes.insert(0, newNote);
-      }
-    });
-
-    noteController.clear();
-
-    Navigator.pop(context);
-  }
-
-  // Delete note
-  void deleteNote(String id) {
-
-    setState(() {
-      notes.removeWhere(
-        (note) => note['id'] == id,
+      _notes.insert(
+        0,
+        Note(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
+          title: draft.title,
+          content: draft.content,
+        ),
       );
     });
   }
 
-  // Edit note
-  void editNote(Map<String, dynamic> note) {
-
-    editingNote = note;
-
-    noteController.text = note['content'];
-
-    showNoteDialog();
+  Future<void> _edit(Note note) async {
+    final draft = await showNoteInputDialog(context, initial: note);
+    if (draft == null) return;
+    setState(() {
+      final index = _notes.indexWhere((n) => n.id == note.id);
+      _notes[index] = note.copyWith(title: draft.title, content: draft.content);
+    });
   }
 
-  // Show dialog
-  void showNoteDialog() {
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-
-        title: Text(
-          editingNote != null
-              ? 'Edit Note'
-              : 'Add New Note',
-        ),
-
-        content: TextField(
-          controller: noteController,
-
-          decoration: const InputDecoration(
-            hintText: 'Enter your note here...',
-            border: OutlineInputBorder(),
-          ),
-
-          maxLines: 5,
-          autofocus: true,
-        ),
-
-        actions: [
-
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text('Cancel'),
-          ),
-
-          TextButton(
-            onPressed: addNote,
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
+  void _delete(String id) => setState(() => _notes.removeWhere((n) => n.id == id));
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-
-      body: Column(
-        children: [
-
-          // Header
-          Container(
-            height: 100,
-            color: Colors.blue,
-
-            padding: const EdgeInsets.only(
-              bottom: 15,
-              left: 20,
-              right: 20,
+      appBar: AppBar(title: const Text('My Notes')),
+      body: _notes.isEmpty
+          ? const Center(child: Text('No notes yet.'))
+          : ListView.builder(
+              padding: const EdgeInsets.all(8),
+              itemCount: _notes.length,
+              itemBuilder: (context, index) {
+                final note = _notes[index];
+                return NoteItem(
+                  key: ValueKey(note.id),
+                  note: note,
+                  onEdit: () => _edit(note),
+                  onDelete: () => _delete(note.id),
+                );
+              },
             ),
-
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment:
-                  MainAxisAlignment.spaceBetween,
-
-              children: [
-
-                const Text(
-                  'My Notes',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                // Add button
-                InkWell(
-                  onTap: () {
-
-                    editingNote = null;
-
-                    noteController.clear();
-
-                    showNoteDialog();
-                  },
-
-                  child: Container(
-                    width: 36,
-                    height: 36,
-
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius:
-                          BorderRadius.circular(18),
-                    ),
-
-                    child: const Center(
-                      child: Text(
-                        '+',
-                        style: TextStyle(
-                          fontSize: 24,
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Notes list
-          Expanded(
-
-            child: notes.isNotEmpty
-
-                ? ListView.builder(
-
-                    padding:
-                        const EdgeInsets.all(15),
-
-                    itemCount: notes.length,
-
-                    itemBuilder:
-                        (context, index) {
-
-                      final note = notes[index];
-
-                      return Container(
-
-                        margin:
-                            const EdgeInsets.only(
-                          bottom: 12,
-                        ),
-
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-
-                          borderRadius:
-                              BorderRadius.circular(8),
-
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black
-                                  .withOpacity(0.1),
-                              blurRadius: 4,
-                              offset:
-                                  const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-
-                        child: Padding(
-                          padding:
-                              const EdgeInsets.all(15),
-
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-
-                            children: [
-
-                              Text(
-                                note['content'],
-                                style:
-                                    const TextStyle(
-                                  fontSize: 16,
-                                ),
-                              ),
-
-                              const SizedBox(
-                                height: 10,
-                              ),
-
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.end,
-
-                                children: [
-
-                                  TextButton(
-                                    onPressed: () =>
-                                        editNote(note),
-
-                                    child: const Text(
-                                      'Edit',
-                                      style: TextStyle(
-                                        color: Colors.blue,
-                                      ),
-                                    ),
-                                  ),
-
-                                  TextButton(
-                                    onPressed: () =>
-                                        deleteNote(
-                                            note['id']),
-
-                                    child: const Text(
-                                      'Delete',
-                                      style: TextStyle(
-                                        color: Colors.red,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  )
-
-                : const Center(
-                    child: Text(
-                      'No notes yet. Create one!',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color:
-                            Color(0xFF7F8C8D),
-                      ),
-                    ),
-                  ),
-          ),
-        ],
+      floatingActionButton: FloatingActionButton(
+        onPressed: _add,
+        tooltip: 'Add note',
+        child: const Icon(Icons.add),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-
-    noteController.dispose();
-
-    super.dispose();
   }
 }

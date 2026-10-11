@@ -1,30 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import 'screens/home_screen.dart';
 import 'screens/notes_screen.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+void main() => runApp(const NotesApp());
 
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+final _router = GoRouter(
+  routes: [
+    GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+    GoRoute(path: '/notes', builder: (context, state) => const NotesScreen()),
+  ],
+);
+
+class NotesApp extends StatelessWidget {
+  const NotesApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Notes App',
-
-      theme: ThemeData(
-        primarySwatch: Colors.deepOrange,
+      theme: ThemeData(colorSchemeSeed: const Color(0xFF208AEF)),
+      darkTheme: ThemeData(
+        colorSchemeSeed: const Color(0xFF208AEF),
+        brightness: Brightness.dark,
       ),
-
-      initialRoute: '/',
-
-      routes: {
-        '/': (context) => const HomeScreen(),
-        '/notes': (context) => const NotesScreen(),
-      },
+      routerConfig: _router,
     );
   }
 }
